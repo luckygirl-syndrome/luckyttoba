@@ -82,9 +82,10 @@
 | 2-2 | `01_create_gt_template.py` — 200개 상품명 샘플링 + 템플릿 | ⬜ | 전략적 샘플링 (양성/음성/경계) |
 | 2-3 | GT 라벨링 (200개) | ⬜ 👤 | 팜팜이 100개 + 경현 100개 (20개 중복→일치율) |
 | 2-4 | `02_classify_keyword.py` — 키워드 베이스라인 | ⬜ | marketing_detector 사용 |
+| 2-4b | `02b_classify_e5.py` — e5 임베딩 베이스라인 | ⬜ | 의미적 유사도 분류, threshold 튜닝 |
 | 2-5 | `03_classify_llm.py` — Gemini 분류 | ⬜ | 프롬프트 설계 포함 |
-| 2-6 | `04_evaluate.py` — GT 대비 평가 | ⬜ | P/R/F1 축별 |
-| 2-7 | `05_visualize.py` — 비교 차트 | ⬜ | |
+| 2-6 | `04_evaluate.py` — GT 대비 3방법 비교 평가 | ⬜ | P/R/F1 축별 |
+| 2-7 | `05_visualize.py` — 비교 차트 | ⬜ | 키워드 vs e5 vs LLM |
 
 ---
 

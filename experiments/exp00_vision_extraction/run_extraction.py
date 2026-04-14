@@ -14,13 +14,14 @@ from openai import OpenAI
 
 # Load environment variables
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 
 class VisionExtractor:
     def __init__(self, dataset_path: str = "manifests/dataset.jsonl"):
         self.dataset_path = dataset_path
         self.base_dir = Path(__file__).parent
+        self.project_root = self.base_dir.parent.parent  # luckyttoba/
         self.prompts = {}
         self._load_prompts()
 
@@ -37,7 +38,7 @@ class VisionExtractor:
 
     def load_image_as_base64(self, image_path: str) -> str:
         """Load image and convert to base64"""
-        full_path = self.base_dir / image_path
+        full_path = self.project_root / image_path
         if not full_path.exists():
             raise FileNotFoundError(f"Image not found: {full_path}")
 

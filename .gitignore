@@ -1,15 +1,31 @@
-# Environment variables
+# Environment
 .env
+.venv/
+venv/
+__pycache__/
+*.pyc
 
-# Claude Code settings
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
 .claude/
 
-# Logs and outputs
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
 *.log
-*.csv
 
-# Results directory (generated files)
-/results/
+# Experiment outputs (재생성 가능)
+experiments/*/outputs/
+experiments/*/results/
 
-# Temporary files
-plan.md
+# Large data files (별도 공유)
+data/*.json
+
+# Temp
+*.tmp

@@ -18,18 +18,22 @@ load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 
 class VisionExtractor:
-    def __init__(self, dataset_path: str = "manifests/dataset.jsonl"):
+    def __init__(self, dataset_path: str = "manifests/dataset.jsonl", prompt_version: str = "v1"):
         self.dataset_path = dataset_path
+        self.prompt_version = prompt_version
         self.base_dir = Path(__file__).parent
         self.project_root = self.base_dir.parent.parent  # luckyttoba/
         self.prompts = {}
         self._load_prompts()
 
     def _load_prompts(self):
-        """Load prompts for each model"""
+        """Load prompts for each model (prompt_version에 따라 파일 선택)"""
         models = ["gemini", "gpt"]
         for model in models:
-            prompt_path = self.base_dir / "prompts" / f"extraction_prompt_{model}.txt"
+            if self.prompt_version == "v1":
+                prompt_path = self.base_dir / "prompts" / f"extraction_prompt_{model}.txt"
+            else:
+                prompt_path = self.base_dir / "prompts" / f"extraction_{self.prompt_version}_{model}.txt"
             if prompt_path.exists():
                 with open(prompt_path, "r", encoding="utf-8") as f:
                     self.prompts[model] = f.read()
@@ -161,7 +165,7 @@ class VisionExtractor:
 
     def get_next_run_number(self, model: str, image_id: str) -> int:
         """Get the next run number for a model-image combination"""
-        results_dir = self.base_dir / "results" / model
+        results_dir = self.base_dir / "results" / f"{model}_{self.prompt_version}"
         results_dir.mkdir(parents=True, exist_ok=True)
 
         # Check for existing files matching pattern
@@ -181,8 +185,8 @@ class VisionExtractor:
         return max(run_numbers) + 1 if run_numbers else 1
 
     def save_result(self, model: str, image_id: str, run: int, result: Dict[str, Any], timestamp: str):
-        """Save extraction result to JSONL file"""
-        results_dir = self.base_dir / "results" / model
+        """Save extraction result to JSONL file (버전별 폴더)"""
+        results_dir = self.base_dir / "results" / f"{model}_{self.prompt_version}"
         results_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure run number is two digits
@@ -271,9 +275,15 @@ def main():
     parser.add_argument(
         "--models",
         nargs="+",
-        default=["gemini", "gpt"],
+        default=["gemini"],
         choices=["gemini", "gpt"],
-        help="Models to use for extraction (default: all)"
+        help="Models to use for extraction (default: gemini)"
+    )
+    parser.add_argument(
+        "--prompt-version",
+        default="v1",
+        choices=["v1", "v2"],
+        help="Prompt version: v1 (기존) or v2 (새 프롬프트)"
     )
     parser.add_argument(
         "--indices",
@@ -289,7 +299,7 @@ def main():
 
     args = parser.parse_args()
 
-    extractor = VisionExtractor(dataset_path=args.dataset)
+    extractor = VisionExtractor(dataset_path=args.dataset, prompt_version=args.prompt_version)
     extractor.run_extraction(models=args.models, image_indices=args.indices)
 
 

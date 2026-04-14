@@ -12,29 +12,10 @@
 | LLM 모델 (전체) | Gemini 3.1 Flash-Lite |
 | 시험 2 비교 대상 | LLM만 (RoBERTa 제외) |
 | 시험 3 옷 묘사 데이터 | 시험 0에서 실제 Vision 추출한 결과 사용 |
-| 시험 0 | 유저가 새 프롬프트/구조로 직접 재실험 |
+| 시험 0 | 팜팜이가 새 프롬프트/구조로 직접 재실험 |
 | 에이블리 가격 | 추가 크롤링 예정 (exp04 전까지) |
 | 지그재그 좋아요 | 없음 확정 (like_score=0 고정) |
 | 찜 = 좋아요 | 동일 필드로 통합 |
-
----
-
-## 🚨 발견된 불일치: style_keywords 어휘가 3곳에서 전부 다름
-
-시험 0, 3, 4에 영향을 주는 심각한 이슈.
-
-| 출처 | 어휘 |
-|------|------|
-| **exp00 Gemini 프롬프트** | 심플베이직, 락시크, 힙, 페미닌, 러블리, 모리걸, 빈티지, 스트릿, 캐주얼, 섹시글램 |
-| **docs/스크린샷 추출 정보** | 캐주얼, 스트릿, 페미닌, 미니멀, 빈티지, 스포티, 포멀, Y2K, 시티보이 |
-| **docs/기초 질문 (유저 태그)** | 깔끔하고 단정한, 편하고 캐주얼한, 여성스럽고 부드러운, 힙하고 개성 있는, 세련되고 포멀한, 빈티지·레트로 |
-
-**왜 문제인가:**
-style_similarity는 "유저 스타일 태그"와 "옷 추출 키워드"를 LLM이 비교해서 점수를 매김.
-어휘가 다르면 LLM이 매핑을 자의적으로 해야 하고, 그러면 점수 일관성이 떨어짐.
-
-**제안:** 시험 0에서 프롬프트를 새로 짤 때 이 어휘를 통일하거나,
-style_similarity 프롬프트에서 어휘 매핑 가이드를 명시. → **유저와 합의 필요**
 
 ---
 
@@ -140,7 +121,7 @@ CONFIDENCE_KEYWORDS = ["후기", "리얼", "검증", "입증", "보장", "추천
 ## 1. 시험 0: Vision 추출 재실험 (`exp00_vision_extraction`)
 
 ### 변경 배경
-기존은 팀원(정현)이 실험한 것. 유저가 새 프롬프트·구조로 직접 재실험.
+기존은 팀원(경현)이 실험한 것. 팜팜이가 새 프롬프트·구조로 직접 재실험.
 
 ### 구조 변경
 
@@ -148,10 +129,10 @@ CONFIDENCE_KEYWORDS = ["후기", "리얼", "검증", "입증", "보장", "추천
 exp00_vision_extraction/
 ├── run_extraction.py           # 기존 스크립트 (수정)
 ├── prompts/
-│   ├── extraction_prompt_gemini.txt      # 기존 (정현 v1)
-│   ├── extraction_prompt_gpt.txt         # 기존 (정현 v1)
-│   ├── extraction_v2_gemini.txt          # 유저 v2 (새로 작성)
-│   └── extraction_v2_gpt.txt             # (필요 시)
+│   ├── gemini_prompt_v1.txt              # 기존 (경현 v1)
+│   ├── gpt_prompt_v1.txt                 # 기존 (경현 v1)
+│   ├── gemini_prompt_v2.txt              # 팜팜이 v2 (새로 작성)
+│   └── gpt_prompt_v2.txt                 # (필요 시)
 ├── manifests/
 │   └── dataset.jsonl
 ├── results/
@@ -167,18 +148,34 @@ exp00_vision_extraction/
 - 결과 저장 경로에 프롬프트 버전 포함
 - 모델은 Gemini 3.1 Flash-Lite 단일 (GPT-4o는 선택)
 
+### visibility 정의
+
+| 등급 | 설명 | 스타일 판단 |
+|------|------|------------|
+| 양호 | 옷 전체가 선명하게 보임 (정면/전신 컷 등) | 가능 — score 제한 없음 |
+| 부분가림 | 모델 포즈·소품·크롭 등으로 일부 가려짐 | 제한적 — style_similarity ≤20 cap |
+| 불량 | 옷이 대부분 안 보이거나 이미지 품질 낮음 | 불가 — style_similarity ≤8 cap |
+
+### 배송 정보
+
+배송 정보(무료배송, 당일발송 등)는 Vision 추출 대상이 **아님**.
+상품 이미지에 배송 문구가 보이더라도 무시하도록 프롬프트에 명시.
+
 ### ⚠️ 시험 0에서 해결해야 할 것들
 
 1. **style_keywords 어휘 통일** (위 🚨 참조)
 2. **좋아요 vs 브랜드 팔로워 혼동 방지** — 프롬프트에 명시적 구분 지침 추가
 3. **쿠폰가 vs 기본 할인가 구분** — "첫 구매 20% 쿠폰"은 할인가가 아님을 명시
 4. **100점 만점 → 5점 변환** — 기존 프롬프트에 있긴 한데, 실제로 지키는지 확인
+5. **마케팅 트리거 동시 추출** — 이미지에서 읽은 상품 제목 텍스트에서 마케팅 트리거(trend_hype, bundle, confidence)도 같이 식별 (경현 제안)
 
 ### 산출물 → 이후 시험에 연결
 - 추출된 옷 묘사 (category, color, fit, style_keywords, visibility, shot_type)
   → **시험 3**에서 style_similarity 입력으로 사용
 - 추출된 숫자 (review_count, discount_rate 등)
   → **시험 1**에서 GT 대비 정확도 평가
+- 추출된 마케팅 트리거 (상품명 텍스트 기반)
+  → **시험 2**에서 참고자료
 
 ---
 
@@ -221,9 +218,20 @@ exp01_vision_accuracy/
 | 텍스트 추출 | review_count | ±5% | 비율 |
 | 텍스트 추출 | review_score | ±0.1 | 0.1 |
 | 텍스트 추출 | wishlist_count | ±10% | 비율 |
-| 추론 | category, color, fit | Exact Match | - |
+| 추론 | category, color, fit | 정규화 후 Exact Match (아래 규칙) | - |
 | 추론 | style_keywords | Multi-label F1 | - |
 | 추론 | shot_type, visibility | Exact Match | - |
+
+**추론 필드 정규화 규칙** (exact match 전 전처리):
+
+| 필드 | 규칙 | 예시 |
+|------|------|------|
+| category | 세분류→대분류 매핑 테이블 적용 | "후드집업"→"집업", "조거 팬츠"→"팬츠" |
+| color | ① 한→영 또는 영→한 통일 사전 ② 접미사 "색" 제거 ③ 다색상은 set 비교 (순서 무관) | "black"→"블랙", "민트색"→"민트", {"그레이","라이트블루"} == {"라이트블루","그레이"} |
+| fit | ① 접미사 "핏" 제거 ② 동의어 매핑 | "스탠다드핏"→"스탠다드", "레귤러핏"→"레귤러"→"스탠다드" |
+
+- 매핑 테이블은 `configs/eval_config.yaml`에 정의
+- GT 라벨링 시에도 동일 정규화 적용 → 라벨러 간 표기 차이 흡수
 
 - 에러 분류: `correct`, `null_miss` (있는데 null), `wrong` (잘못된 값), `null_ok` (정답도 null)
 - 특수 케이스 탐지기: 좋아요↔팔로워 혼동, 쿠폰가↔할인가 혼동
@@ -234,8 +242,21 @@ exp01_vision_accuracy/
 - 에러 유형 분포 (null_miss vs wrong)
 - 프롬프트 v1 vs v2 비교 (시험 0에서 여러 버전 실험 시)
 
+### GT 라벨링 전략
+
+GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준으로 사용.
+
+| 필드 그룹 | 필드 | 담당 | 방식 |
+|-----------|------|------|------|
+| 숫자 | price, discount_rate, review_count, review_score, wishlist_count | 팜팜이+경현 (45장씩) | 이미지 보고 직접 라벨링 |
+| 스타일 | style_keywords, category, color, fit | 낭연+정현 (45장씩) | 이미지 보고 직접 라벨링 |
+| 메타 | shot_type, visibility | 팜팜이+경현 (숫자와 함께) | 이미지 보고 직접 라벨링 |
+
+- 90장 = 플랫폼별 30장씩 (무신사/에이블리/지그재그)
+- 프롬프트를 바꿔가면서 GT와 비교 → 정확도 개선 반복
+- 애매한 케이스는 표시해두고 회의에서 합의
+
 ### ⚠️ 우려사항
-- GT 라벨링은 사람 작업 → 템플릿만 코드로, 나머지는 팀 분담
 - 현재 images/ 에 약 35개 상품. 90장 목표면 55장 추가 필요할 수 있음
 
 ---
@@ -252,7 +273,7 @@ exp01_vision_accuracy/
 ```
 exp02_marketing_trigger/
 ├── 01_create_gt_template.py    # GT 라벨링 템플릿 (200개 상품명)
-├── 02_classify_keyword.py      # 키워드 매칭 (베이스라인)
+├── 02_classify_keyword.py      # 키워드 매칭 (단순 문자열 포함 여부, 임베딩 아님)
 ├── 03_classify_llm.py          # Gemini Flash-Lite 분류
 ├── 04_evaluate.py              # GT 대비 평가
 ├── 05_visualize.py             # 키워드 vs LLM 비교 차트
@@ -281,10 +302,11 @@ exp02_marketing_trigger/
 
 **03_classify_llm.py**
 - Gemini Flash-Lite에 상품명을 보내서 분류
+- **3분할 추출**: 원본 상품명 → 마케팅 트리거 제거된 클린 상품명 + 트리거 문구 (경현 제안)
 
 프롬프트 핵심:
 ```
-상품명에서 마케팅 시그널 3종을 판별하라.
+상품명에서 마케팅 시그널 3종을 판별하고, 마케팅 문구를 제거한 순수 상품명도 추출하라.
 
 [정의]
 - trend_hype: 유행/인기/랭킹을 강조하여 "다들 사니까 나도" 심리를 자극하는 문구
@@ -297,7 +319,8 @@ exp02_marketing_trigger/
 - 각 시그널은 독립적 — 하나의 문구가 여러 시그널에 해당할 수 있음
 
 반드시 JSON으로 응답:
-{"trend_hype": 0 or 1, "trend_hype_phrase": "해당 문구 or null",
+{"clean_product_name": "마케팅 문구 제거된 순수 상품명",
+ "trend_hype": 0 or 1, "trend_hype_phrase": "해당 문구 or null",
  "bundle": 0 or 1, "bundle_phrase": "해당 문구 or null",
  "confidence": 0 or 1, "confidence_phrase": "해당 문구 or null"}
 ```
@@ -315,6 +338,15 @@ exp02_marketing_trigger/
 - 키워드 vs LLM F1 비교 막대그래프 (축별)
 - Confusion matrix 히트맵
 - 오분류 샘플 top-10 출력
+
+### GT 라벨링 전략 (시험 2)
+
+GT는 전부 사람이 직접 만든다.
+
+- **담당**: 팜팜이 100개 + 경현 100개
+- **20개 중복 배정** → inter-annotator agreement 측정
+- **전략적 샘플링**: 양성 60 + 음성 60 + 경계 80 (랜덤 아님)
+- 라벨링 전 `edge_cases.yaml` 가이드라인 공유 필수
 
 ### ⚠️ 우려사항
 - GT 라벨링 전 경계 케이스 합의 필요 → `configs/edge_cases.yaml`에 기준 문서화
@@ -380,7 +412,7 @@ exp03_style_similarity/
 - **분포**: 0~35 히스토그램, 구간당 비율
 - **일관성**: 조합별 std, 전체 평균 std, std>3 비율, std>5 비율
 - **방향성**: sanity 통과율 (맞는 조합 ≥25점, 안 맞는 조합 ≤15점)
-- **cap 준수율**: visibility="부분 가림" → ≤20점, "불량" → ≤8점
+- **cap 준수율**: visibility="부분 가림" → ≤20점, "불량" → ≤8점 (부분가림/불량은 스타일 판단 신뢰도가 낮으므로 점수 상한을 둠)
 - **reason 품질**: 평균 길이, 한국어 비율, 이상 응답(빈 문자열, JSON 에러) 수
 
 ### ⚠️ 우려사항
@@ -428,6 +460,7 @@ exp04_chatbot_ttoba/
 | 6 | NUTE | 할인30%+리뷰많음+쿠폰 | 중간 | 높음 | E형 할인 자극 환기 |
 | 7 | DUTO | 유행+리뷰많음+오늘발견 | 높음 | 중간 | T+U형 사회적 증거 짚기 |
 | 8 | NITO | 할인0%+직접검색+1주고민 | 낮음 | 높음 | 옷장 궁합 확인 |
+| 9 | DUTE | 할인30%+리뷰많음+2주고민+안사기로결정 | 낮음 | 중간 | "안 살 건데 궁금" — 구매 의사 없는 유저에 또바가 어떻게 반응하는지 |
 
 **01_build_scenarios.py**
 - yaml에서 시나리오 로드
@@ -619,7 +652,7 @@ exp05_score_distribution/
 
 [Phase 1] 즉시 시작 가능 ──────────────────────────────────
   ├─ 시험 5: 점수 분포            ← 데이터+코드 모두 있음, 바로 가능
-  └─ 시험 0: Vision 추출 재실험    ← 유저가 프롬프트 작성 후 직접 실행
+  └─ 시험 0: Vision 추출 재실험    ← 팜팜이가 프롬프트 작성 후 직접 실행
 
 [Phase 2] Phase 1 결과 필요 ────────────────────────────────
   ├─ 시험 1: Vision 정확도         ← 시험 0 결과 + GT 라벨링 (병렬 가능)
@@ -645,7 +678,7 @@ exp05_score_distribution/
 
 ---
 
-## 8. 열린 질문 (유저 확인 필요)
+## 8. 열린 질문 (팀 확인 필요)
 
 | # | 질문 | 영향 | 긴급도 |
 |---|------|------|--------|

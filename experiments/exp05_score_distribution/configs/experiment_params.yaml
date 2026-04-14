@@ -1,0 +1,13 @@
+# 시험 5: 점수 분포 & 구간 설계 — 실험 파라미터
+
+seed: 42
+
+# 전처리
+samples_per_platform: 200   # 플랫폼별 샘플 수 → 총 600개
+
+# 가상 유저
+users_per_type: 5           # SBTI 유형당 조합 수 → 16×5 = 80명
+
+# 시각화
+fig_dpi: 300
+hist_bins: 20

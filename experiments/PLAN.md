@@ -158,8 +158,8 @@ exp00_vision_extraction/
 
 ### 배송 정보
 
-배송 정보(무료배송, 당일발송 등)는 Vision 추출 대상이 **아님**.
-상품 이미지에 배송 문구가 보이더라도 무시하도록 프롬프트에 명시.
+배송 정보(무료배송, 당일발송, 빠른출발, 직진배송 등)는 Vision 추출 대상에 **포함**.
+이미지에서 배송 관련 문구가 보이면 `delivery_info` 필드로 추출.
 
 ### ⚠️ 시험 0에서 해결해야 할 것들
 
@@ -266,6 +266,7 @@ GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준
 ### 의존성
 - `shared/data_loader.py` (상품명 로드)
 - `shared/marketing_detector.py` (키워드 베이스라인)
+- e5 임베딩 모델 (의미적 유사도 베이스라인)
 - Gemini API 접근
 
 ### 파일 구조
@@ -273,10 +274,11 @@ GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준
 ```
 exp02_marketing_trigger/
 ├── 01_create_gt_template.py    # GT 라벨링 템플릿 (200개 상품명)
-├── 02_classify_keyword.py      # 키워드 매칭 (단순 문자열 포함 여부, 임베딩 아님)
-├── 03_classify_llm.py          # Gemini Flash-Lite 분류
-├── 04_evaluate.py              # GT 대비 평가
-├── 05_visualize.py             # 키워드 vs LLM 비교 차트
+├── 02_classify_keyword.py      # 베이스라인 1: 키워드 매칭 (단순 문자열 포함)
+├── 02b_classify_e5.py          # 베이스라인 2: e5 임베딩 유사도 분류
+├── 03_classify_llm.py          # 메인: Gemini Flash-Lite 분류
+├── 04_evaluate.py              # GT 대비 3방법 비교 평가
+├── 05_visualize.py             # 키워드 vs e5 vs LLM 비교 차트
 ├── prompts/
 │   └── trigger_classify.txt    # LLM 분류 프롬프트
 ├── gt/
@@ -295,12 +297,18 @@ exp02_marketing_trigger/
   - 경계선(키워드 부분 매칭) 80개
 - 출력: `gt/gt_template.jsonl` (product_name + keyword_hint + 빈 라벨)
 
-**02_classify_keyword.py**
+**02_classify_keyword.py** (베이스라인 1)
 - `shared/marketing_detector.py` 사용
 - 200개 상품명 → `(trend_hype, bundle, confidence)` 예측
 - 매칭된 키워드도 함께 기록 (디버깅용)
 
-**03_classify_llm.py**
+**02b_classify_e5.py** (베이스라인 2)
+- e5 임베딩 모델로 상품명과 트리거 정의문 간 의미적 유사도 계산
+- 각 축(trend_hype, bundle, confidence)의 대표 문장과 cosine similarity
+- threshold 기반 이진 분류 (threshold는 GT 일부로 튜닝)
+- 키워드에 없는 변형 표현도 잡을 수 있는지 검증
+
+**03_classify_llm.py** (메인)
 - Gemini Flash-Lite에 상품명을 보내서 분류
 - **3분할 추출**: 원본 상품명 → 마케팅 트리거 제거된 클린 상품명 + 트리거 문구 (경현 제안)
 
@@ -328,16 +336,17 @@ exp02_marketing_trigger/
 - 200개를 배치 처리 (rate limit 고려)
 
 **04_evaluate.py**
-- 키워드 vs LLM, 각각 GT 대비:
+- 키워드 vs e5 vs LLM, 각각 GT 대비:
   - 축별 Precision / Recall / F1
   - Confusion matrix (TP/FP/TN/FN)
   - 전체 Macro F1
 - **Recall 우선** — 못 잡으면 Impulse Score 과소평가
 
 **05_visualize.py**
-- 키워드 vs LLM F1 비교 막대그래프 (축별)
-- Confusion matrix 히트맵
+- 키워드 vs e5 vs LLM F1 비교 막대그래프 (축별)
+- Confusion matrix 히트맵 (3방법 각각)
 - 오분류 샘플 top-10 출력
+- e5가 키워드 대비 잡아낸 변형 표현 사례 정리
 
 ### GT 라벨링 전략 (시험 2)
 

@@ -1,0 +1,15 @@
+# Environment variables
+.env
+
+# Claude Code settings
+.claude/
+
+# Logs and outputs
+*.log
+*.csv
+
+# Results directory (generated files)
+/results/
+
+# Temporary files
+plan.md

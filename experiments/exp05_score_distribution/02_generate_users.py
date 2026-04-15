@@ -36,30 +36,13 @@ CONTACT_REASONS = [
     "오래 고민했는데 결정이 안 나서요",
 ]
 
-# 모순 조합 필터
-CONTRADICTORY = [
-    # (interest 응답, contact_reason) — 비현실적 조합
-    ("오늘 처음 봤어요", "오래 고민했는데 결정이 안 나서요"),
-    ("2주 이상 고민했어요", "그냥 이 옷 어떤가 궁금해서요"),
-]
-
-
 def generate_all_combos():
-    """모든 유효 조합 생성 (모순 제거)."""
+    """모든 조합 생성."""
     combos = []
     for p_label, p_score in PRICE_REASONABLE.items():
         for i_label, i_score in INTEREST_PERSISTENCE.items():
             for d_label, d_score in DISCOVERY_STABILITY.items():
                 for c_reason in CONTACT_REASONS:
-                    # 모순 필터
-                    skip = False
-                    for bad_interest, bad_contact in CONTRADICTORY:
-                        if i_label == bad_interest and c_reason == bad_contact:
-                            skip = True
-                            break
-                    if skip:
-                        continue
-
                     combos.append({
                         "price_label": p_label,
                         "interest_label": i_label,

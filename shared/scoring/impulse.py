@@ -73,6 +73,10 @@ def compute_impulse_score(
     is_E, is_O,
     # 플랫폼
     platform="default",
+    # 마케팅 트리거 연속 스코어 (0.0~1.0, None이면 0/1 사용)
+    trend_hype_score=None,
+    bundle_score=None,
+    confidence_score=None,
 ) -> int:
     """Impulse Score (0~100) 계산."""
 
@@ -109,9 +113,14 @@ def compute_impulse_score(
     w2 = 0.4 if is_E else 0.2
     w3 = 0.4 if is_O else 0.3
 
+    # 연속 스코어가 주어지면 0/1 대신 사용
+    th = trend_hype if trend_hype_score is None else trend_hype_score
+    bd = bundle if bundle_score is None else bundle_score
+    cf = confidence if confidence_score is None else confidence_score
+
     w_total = w1 + w2 + w3
     if w_total > 0:
-        title_marketing_score = (w1 * trend_hype + w2 * bundle + w3 * confidence) / w_total
+        title_marketing_score = (w1 * th + w2 * bd + w3 * cf) / w_total
     else:
         title_marketing_score = 0.0
 
@@ -139,5 +148,6 @@ def compute_impulse_score(
       + 0.20 * title_marketing_score  * title_marketing_m
     )
 
-    # Step 4: 0~100 변환
-    return max(0, min(100, round((raw_score / MAX_POSSIBLE) * 100)))
+    # Step 4: 0~100 변환 (기본 점수 가산)
+    base = 10 + (5 if is_D else 0)
+    return max(0, min(100, round((raw_score / MAX_POSSIBLE) * 100) + base))

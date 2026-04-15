@@ -25,12 +25,6 @@ DISCOVERY_STABILITY = {
     "브랜드 계정에 신상이 추가된 걸 봤어요": 12,
 }
 
-# --- 모순 조합 필터 ---
-# (interest_persistence 응답, discovery_stability 응답) 중 비현실적 조합
-CONTRADICTORY_PAIRS = {
-    ("2주 이상 고민했어요", "오늘 처음 봤어요"),  # 공통질문엔 이 조합 없지만 참고용
-}
-
 
 def get_all_survey_combinations() -> list[dict]:
     """price × interest × discovery 모든 유효 조합을 생성.

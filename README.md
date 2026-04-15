@@ -16,8 +16,8 @@
 | 번호 | 폴더 | 내용 |
 |------|------|------|
 | 00 | `experiments/exp00_vision_extraction` | Vision LLM 상품정보 추출 |
-| 01 | `experiments/exp01_vision_accuracy` | 추출 정확도 (GT 대비) |
-| 02 | `experiments/exp02_marketing_trigger` | 마케팅 트리거 분류 |
+| 01 | `experiments/exp01_vision_accuracy` | 추출 정확도 + 마케팅 트리거 (GT 대비) |
+| ~~02~~ | ~~`experiments/exp02_marketing_trigger`~~ | ~~마케팅 트리거 분류~~ → 시험 1에 흡수 |
 | 03 | `experiments/exp03_style_similarity` | style_similarity 검증 |
 | 04 | `experiments/exp04_chatbot_ttoba` | 또바 대화 품질 |
 | 05 | `experiments/exp05_score_distribution` | Impulse/Match Score 분포 & 구간 설계 |

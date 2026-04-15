@@ -24,6 +24,9 @@ Desktop.ini
 experiments/*/outputs/
 experiments/*/results/
 
+# Model weights (너무 커서 git 제외)
+experiments/*/model/
+
 # Large data files (별도 공유)
 data/*.json
 

@@ -10,7 +10,7 @@
 | 항목 | 결정 |
 |------|------|
 | LLM 모델 (전체) | Gemini 3.1 Flash-Lite |
-| 시험 2 비교 대상 | LLM만 (RoBERTa 제외) |
+| 시험 2 → 시험 1 흡수 | 마케팅 트리거를 Vision 추출(시험 0)에서 동시 추출, 정확도는 시험 1에서 평가. e5/별도 LLM 비교 폐기 |
 | 시험 3 옷 묘사 데이터 | 시험 0에서 실제 Vision 추출한 결과 사용 |
 | 시험 0 | 팜팜이가 새 프롬프트/구조로 직접 재실험 |
 | 에이블리 가격 | 추가 크롤링 예정 (exp04 전까지) |
@@ -90,7 +90,6 @@ class Product:
 ### 0-2. `shared/marketing_detector.py` — 키워드 기반 트리거 검출
 
 시험 5에서 48,000개 상품의 marketing score 계산에 필요.
-시험 2에서 LLM 분류기와 비교할 베이스라인으로도 사용.
 
 ```python
 TREND_KEYWORDS = ["인기", "랭킹", "베스트", "HOT", "hot", "트렌드",
@@ -153,8 +152,8 @@ exp00_vision_extraction/
 | 등급 | 설명 | 스타일 판단 |
 |------|------|------------|
 | 양호 | 옷 전체가 선명하게 보임 (정면/전신 컷 등) | 가능 — score 제한 없음 |
-| 부분가림 | 모델 포즈·소품·크롭 등으로 일부 가려짐 | 제한적 — style_similarity ≤20 cap |
-| 불량 | 옷이 대부분 안 보이거나 이미지 품질 낮음 | 불가 — style_similarity ≤8 cap |
+| 부분가림 | 모델 포즈·소품·크롭 등으로 일부 가려짐 | 제한적 |
+| 불량 | 옷이 대부분 안 보이거나 이미지 품질 낮음 | 불가 |
 
 ### 배송 정보
 
@@ -174,12 +173,16 @@ exp00_vision_extraction/
   → **시험 3**에서 style_similarity 입력으로 사용
 - 추출된 숫자 (review_count, discount_rate 등)
   → **시험 1**에서 GT 대비 정확도 평가
-- 추출된 마케팅 트리거 (상품명 텍스트 기반)
-  → **시험 2**에서 참고자료
+- 추출된 마케팅 트리거 (trend_hype, bundle, confidence)
+  → **시험 1**에서 GT 대비 정확도 평가 (기존 시험 2를 흡수)
 
 ---
 
-## 2. 시험 1: Vision 추출 정확도 (`exp01_vision_accuracy`)
+## 2. 시험 1: Vision 추출 정확도 + 마케팅 트리거 (`exp01_vision_accuracy`)
+
+> **변경 (2026-04-15):** 기존 시험 2(마케팅 트리거 분류)를 시험 1에 흡수.
+> 시험 0 프롬프트 v2에서 마케팅 트리거도 동시 추출하므로, 같은 100장 스크린샷의 GT로 정확도를 함께 평가한다.
+> e5 임베딩 비교·별도 텍스트 200개 실험은 폐기.
 
 ### 의존성
 - 시험 0 완료 (추출 결과가 있어야 비교 가능)
@@ -218,28 +221,27 @@ exp01_vision_accuracy/
 | 텍스트 추출 | review_count | ±5% | 비율 |
 | 텍스트 추출 | review_score | ±0.1 | 0.1 |
 | 텍스트 추출 | wishlist_count | ±10% | 비율 |
-| 추론 | category, color, fit | 정규화 후 Exact Match (아래 규칙) | - |
-| 추론 | style_keywords | Multi-label F1 | - |
+| 추론 | category, color, fit | 수동 판단 (모델 결과를 사람이 직접 맞는지 평가) | - |
+| 추론 | style_keywords | Multi-label F1 | 최대 3개 태깅 |
 | 추론 | shot_type, visibility | Exact Match | - |
+| 마케팅 트리거 | trend_hype, bundle, confidence | 0/1: 축별 P/R/F1. 0~1 스코어: GT 없이 정성 평가 | LLM 추출 (프롬프트에서 0/1 + 0~1 둘 다 출력) |
 
-**추론 필드 정규화 규칙** (exact match 전 전처리):
+> **category, color, fit**은 표기 변형이 너무 다양하여(후드집업 vs 집업, black vs 블랙, 스탠다드핏 vs 레귤러핏 등) 자동 exact match 대신 **모델이 뽑은 결과를 사람이 직접 보고 맞는지 판단**하는 방식으로 평가한다. GT를 일괄 생성하지 않음.
 
-| 필드 | 규칙 | 예시 |
-|------|------|------|
-| category | 세분류→대분류 매핑 테이블 적용 | "후드집업"→"집업", "조거 팬츠"→"팬츠" |
-| color | ① 한→영 또는 영→한 통일 사전 ② 접미사 "색" 제거 ③ 다색상은 set 비교 (순서 무관) | "black"→"블랙", "민트색"→"민트", {"그레이","라이트블루"} == {"라이트블루","그레이"} |
-| fit | ① 접미사 "핏" 제거 ② 동의어 매핑 | "스탠다드핏"→"스탠다드", "레귤러핏"→"레귤러"→"스탠다드" |
-
-- 매핑 테이블은 `configs/eval_config.yaml`에 정의
-- GT 라벨링 시에도 동일 정규화 적용 → 라벨러 간 표기 차이 흡수
+> **마케팅 트리거**는 시험 0 프롬프트에서 LLM이 상품 제목 텍스트 기반으로 trend_hype/bundle/confidence를 추출.
+> - **0/1 바이너리**: 해당 마케팅 문구 존재 여부. GT와 비교하여 축별 Precision/Recall/F1 측정.
+> - **0~1 연속 스코어**: LLM이 자극 강도를 판단 (키워드 개수·강렬함 종합). GT 없이 나온 결과를 보고 정성 평가.
+> - **marketing_phrases**: 매칭된 원문 문구 추출.
+> - **Recall 우선** — 시그널을 못 잡으면 Impulse Score 과소평가.
 
 - 에러 분류: `correct`, `null_miss` (있는데 null), `wrong` (잘못된 값), `null_ok` (정답도 null)
 - 특수 케이스 탐지기: 좋아요↔팔로워 혼동, 쿠폰가↔할인가 혼동
 
 **03_visualize.py**
-- 필드별 정확도 막대그래프 (텍스트 추출 vs 추론 그룹 분리)
+- 필드별 정확도 막대그래프 (텍스트 추출 vs 추론 vs 마케팅 트리거 그룹 분리)
 - 플랫폼별 정확도 히트맵
 - 에러 유형 분포 (null_miss vs wrong)
+- 마케팅 트리거 축별 Confusion matrix
 - 프롬프트 v1 vs v2 비교 (시험 0에서 여러 버전 실험 시)
 
 ### GT 라벨링 전략
@@ -248,118 +250,26 @@ GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준
 
 | 필드 그룹 | 필드 | 담당 | 방식 |
 |-----------|------|------|------|
-| 숫자 | price, discount_rate, review_count, review_score, wishlist_count | 팜팜이+경현 (45장씩) | 이미지 보고 직접 라벨링 |
-| 스타일 | style_keywords, category, color, fit | 낭연+정현 (45장씩) | 이미지 보고 직접 라벨링 |
-| 메타 | shot_type, visibility | 팜팜이+경현 (숫자와 함께) | 이미지 보고 직접 라벨링 |
+| 숫자 | price, discount_rate, review_count, review_score, wishlist_count | 경현+팜팜이 (50장씩) | 이미지 보고 직접 라벨링 |
+| 스타일 | style_keywords | 낭연+정현 (50장씩) | 이미지 보고 직접 라벨링, **최대 3개** |
+| 스타일 (수동) | category, color, fit | 낭연+정현 | 모델 결과를 보고 맞는지 판단 (GT 일괄 생성 안 함) |
+| 메타 | shot_type, visibility | 경현+팜팜이 (숫자와 함께) | 이미지 보고 직접 라벨링 |
+| 마케팅 트리거 | trend_hype, bundle, confidence | 낭연+정현 (50장씩) | 상품 제목 보고 0/1 라벨링 (GT). 0~1 스코어는 LLM 추출, GT 없이 정성 평가 |
 
-- 90장 = 플랫폼별 30장씩 (무신사/에이블리/지그재그)
+- **100장** = 플랫폼별 균등 배분 (현재 37장 → 인당 21장씩 추가 수집)
 - 프롬프트를 바꿔가면서 GT와 비교 → 정확도 개선 반복
 - 애매한 케이스는 표시해두고 회의에서 합의
 
 ### ⚠️ 우려사항
-- 현재 images/ 에 약 35개 상품. 90장 목표면 55장 추가 필요할 수 있음
+- 현재 images/ 에 약 37개 상품. 100장 목표면 인당 21장 추가 필요
 
 ---
 
-## 3. 시험 2: 마케팅 트리거 분류 (`exp02_marketing_trigger`)
+## ~~3. 시험 2: 마케팅 트리거 분류~~ → 시험 1에 흡수
 
-### 의존성
-- `shared/data_loader.py` (상품명 로드)
-- `shared/marketing_detector.py` (키워드 베이스라인)
-- e5 임베딩 모델 (의미적 유사도 베이스라인)
-- Gemini API 접근
-
-### 파일 구조
-
-```
-exp02_marketing_trigger/
-├── 01_create_gt_template.py    # GT 라벨링 템플릿 (200개 상품명)
-├── 02_classify_keyword.py      # 베이스라인 1: 키워드 매칭 (단순 문자열 포함)
-├── 02b_classify_e5.py          # 베이스라인 2: e5 임베딩 유사도 분류
-├── 03_classify_llm.py          # 메인: Gemini Flash-Lite 분류
-├── 04_evaluate.py              # GT 대비 3방법 비교 평가
-├── 05_visualize.py             # 키워드 vs e5 vs LLM 비교 차트
-├── prompts/
-│   └── trigger_classify.txt    # LLM 분류 프롬프트
-├── gt/
-│   └── gt_labels.jsonl
-├── configs/
-│   └── edge_cases.yaml         # 경계 케이스 합의 기준
-└── outputs/
-```
-
-### 코드 설계
-
-**01_create_gt_template.py**
-- 3개 플랫폼 크롤링 데이터에서 상품명 200개 **전략적 샘플링**:
-  - 키워드 매칭 양성(마케팅 문구 있는 것) 60개
-  - 키워드 매칭 음성(없는 것) 60개
-  - 경계선(키워드 부분 매칭) 80개
-- 출력: `gt/gt_template.jsonl` (product_name + keyword_hint + 빈 라벨)
-
-**02_classify_keyword.py** (베이스라인 1)
-- `shared/marketing_detector.py` 사용
-- 200개 상품명 → `(trend_hype, bundle, confidence)` 예측
-- 매칭된 키워드도 함께 기록 (디버깅용)
-
-**02b_classify_e5.py** (베이스라인 2)
-- e5 임베딩 모델로 상품명과 트리거 정의문 간 의미적 유사도 계산
-- 각 축(trend_hype, bundle, confidence)의 대표 문장과 cosine similarity
-- threshold 기반 이진 분류 (threshold는 GT 일부로 튜닝)
-- 키워드에 없는 변형 표현도 잡을 수 있는지 검증
-
-**03_classify_llm.py** (메인)
-- Gemini Flash-Lite에 상품명을 보내서 분류
-- **3분할 추출**: 원본 상품명 → 마케팅 트리거 제거된 클린 상품명 + 트리거 문구 (경현 제안)
-
-프롬프트 핵심:
-```
-상품명에서 마케팅 시그널 3종을 판별하고, 마케팅 문구를 제거한 순수 상품명도 추출하라.
-
-[정의]
-- trend_hype: 유행/인기/랭킹을 강조하여 "다들 사니까 나도" 심리를 자극하는 문구
-- bundle: 묶음/증정/추가할인 등 "지금 사면 더 이득" 심리를 자극하는 문구
-- confidence: 품질 보증/후기 검증/추천 등 "안심해도 돼" 심리를 자극하는 문구
-
-[주의]
-- 상품 자체의 속성 설명은 시그널이 아님 ("코튼 100%"는 confidence가 아님)
-- 이모지나 감탄사만으로는 시그널로 판단하지 않음
-- 각 시그널은 독립적 — 하나의 문구가 여러 시그널에 해당할 수 있음
-
-반드시 JSON으로 응답:
-{"clean_product_name": "마케팅 문구 제거된 순수 상품명",
- "trend_hype": 0 or 1, "trend_hype_phrase": "해당 문구 or null",
- "bundle": 0 or 1, "bundle_phrase": "해당 문구 or null",
- "confidence": 0 or 1, "confidence_phrase": "해당 문구 or null"}
-```
-
-- 200개를 배치 처리 (rate limit 고려)
-
-**04_evaluate.py**
-- 키워드 vs e5 vs LLM, 각각 GT 대비:
-  - 축별 Precision / Recall / F1
-  - Confusion matrix (TP/FP/TN/FN)
-  - 전체 Macro F1
-- **Recall 우선** — 못 잡으면 Impulse Score 과소평가
-
-**05_visualize.py**
-- 키워드 vs e5 vs LLM F1 비교 막대그래프 (축별)
-- Confusion matrix 히트맵 (3방법 각각)
-- 오분류 샘플 top-10 출력
-- e5가 키워드 대비 잡아낸 변형 표현 사례 정리
-
-### GT 라벨링 전략 (시험 2)
-
-GT는 전부 사람이 직접 만든다.
-
-- **담당**: 팜팜이 100개 + 경현 100개
-- **20개 중복 배정** → inter-annotator agreement 측정
-- **전략적 샘플링**: 양성 60 + 음성 60 + 경계 80 (랜덤 아님)
-- 라벨링 전 `edge_cases.yaml` 가이드라인 공유 필수
-
-### ⚠️ 우려사항
-- GT 라벨링 전 경계 케이스 합의 필요 → `configs/edge_cases.yaml`에 기준 문서화
-- LLM 200회 호출 비용 (Flash-Lite면 매우 저렴, 거의 무시 가능)
+> **폐기 (2026-04-15):** 시험 0 프롬프트 v2에서 마케팅 트리거를 Vision 추출과 동시에 식별하므로,
+> 별도 텍스트 200개 실험(e5 임베딩, LLM 분류)은 불필요. 마케팅 트리거 정확도 평가는 시험 1에서 같은 100장 GT로 수행.
+> `exp02_marketing_trigger/` 폴더는 기존 노트북 참조용으로만 보존.
 
 ---
 
@@ -376,7 +286,7 @@ GT는 전부 사람이 직접 만든다.
 exp03_style_similarity/
 ├── 01_build_test_set.py        # 스타일태그 × 옷묘사 조합 생성
 ├── 02_run_scoring.py           # LLM 3회 반복 호출
-├── 03_analyze.py               # 분포, 일관성, 방향성, cap
+├── 03_analyze.py               # 분포, 일관성, 방향성
 ├── 04_visualize.py             # 히스토그램, 박스플롯
 ├── configs/
 │   ├── style_tags.yaml         # 테스트용 스타일 태그 5종
@@ -402,13 +312,12 @@ exp03_style_similarity/
   - category, color, fit, style_keywords, shot_type, visibility 구성
   - 플랫폼별 골고루, 스타일 다양하게 선택
 - sanity 케이스 20개: 명백히 맞는 10개 + 명백히 안 맞는 10개
-- visibility 테스트: "부분 가림" 5개 + "불량" 5개 포함
-- 전체: 5 × 20 + 20 + 10 = **130개 조합**
+- 전체: 5 × 20 + 20 = **120개 조합**
 
 **02_run_scoring.py**
 - 각 조합에 대해 Gemini Flash-Lite 호출
 - temperature=0, 3회 반복
-- 총 호출: 130 × 3 = **390회** (Flash-Lite면 비용 거의 없음)
+- 총 호출: 120 × 3 = **360회** (Flash-Lite면 비용 거의 없음)
 - liked_purchases는 None으로 통일 (변수 통제)
 - 결과 스키마:
   ```json
@@ -421,7 +330,6 @@ exp03_style_similarity/
 - **분포**: 0~35 히스토그램, 구간당 비율
 - **일관성**: 조합별 std, 전체 평균 std, std>3 비율, std>5 비율
 - **방향성**: sanity 통과율 (맞는 조합 ≥25점, 안 맞는 조합 ≤15점)
-- **cap 준수율**: visibility="부분 가림" → ≤20점, "불량" → ≤8점 (부분가림/불량은 스타일 판단 신뢰도가 낮으므로 점수 상한을 둠)
 - **reason 품질**: 평균 길이, 한국어 비율, 이상 응답(빈 문자열, JSON 에러) 수
 
 ### ⚠️ 우려사항
@@ -439,6 +347,22 @@ exp03_style_similarity/
 - `shared/scoring/` (점수 계산)
 - Gemini API 접근
 - (선택) 에이블리 가격 크롤링 완료
+
+### prompt_builder 실험 조건
+
+system_prompt에 어떤 정보를 넣느냐에 따라 또바 응답이 달라짐.
+다음 조합을 비교 실험:
+
+| 조건 | 포함 내용 |
+|------|----------|
+| 축 설명 (개요) | 8개 축의 한 줄 요약 |
+| 축 설명 (상세) | 8개 축의 상세 설명 |
+| 유형 설명 (개요) | 16유형의 한 줄 요약 |
+| 유형 설명 (상세) | 16유형의 상세 설명 |
+| 축 + 긴장관계 | 축 설명 + IT, UM 같은 긴장관계 쌍 설명 |
+
+→ 긴장관계까지 보여줄 수 있는 **유형 하나**(예: IT 또는 UM)를 정해서 평가.
+전체 조합 실험은 비용 문제로 1개 유형에 집중.
 
 ### 파일 구조
 
@@ -554,9 +478,6 @@ exp05_score_distribution/
   - interest_persistence: 4가지
   - discovery_stability: 5가지
   - contact_reason: 3가지 (점수에는 안 쓰이지만 프로필용)
-- 모순 필터:
-  - "오늘 처음 봤어요" + "오래 고민했는데 결정이 안 나서요" → 제거
-  - "2주 이상 고민했어요" + "그냥 이 옷 어떤가 궁금해서요" → 제거
 - 유형당 5개 조합 선택 (다양성 최대화) → 16 × 5 = **80명**
 - 결과: `outputs/virtual_users.parquet`
 
@@ -664,8 +585,7 @@ exp05_score_distribution/
   └─ 시험 0: Vision 추출 재실험    ← 팜팜이가 프롬프트 작성 후 직접 실행
 
 [Phase 2] Phase 1 결과 필요 ────────────────────────────────
-  ├─ 시험 1: Vision 정확도         ← 시험 0 결과 + GT 라벨링 (병렬 가능)
-  └─ 시험 2: 마케팅 트리거         ← GT 라벨링 (시험 1과 병렬 가능)
+  └─ 시험 1: Vision 정확도 + 마케팅 트리거  ← 시험 0 결과 + GT 100장 라벨링
 
 [Phase 3] Phase 2 결과 필요 ────────────────────────────────
   └─ 시험 3: style_similarity     ← 시험 0 추출 데이터 + 시험 1 정확도 확인
@@ -680,10 +600,9 @@ exp05_score_distribution/
 1. `shared/data_loader.py` + `shared/marketing_detector.py` + `shared/prompt_builder.py`
 2. `exp05` 전체 (01~06)
 3. `exp00` 구조 개선 (프롬프트 버전 관리, `--prompt-version` 인자)
-4. `exp01` 전체 (01~03)
-5. `exp02` 전체 (01~05)
-6. `exp03` 전체 (01~04)
-7. `exp04` 전체 (01~04)
+4. `exp01` 전체 (01~03) — 마케팅 트리거 평가 포함 (기존 exp02 흡수)
+5. `exp03` 전체 (01~04)
+6. `exp04` 전체 (01~04)
 
 ---
 
@@ -693,5 +612,5 @@ exp05_score_distribution/
 |---|------|------|--------|
 | 1 | **style_keywords 어휘 통일** — 3곳(추출 프롬프트, docs, 기초질문)이 다른데 어떻게 맞출지 | 시험 0, 3, 4 | 🔴 높음 |
 | 2 | **에이블리 크롤링 범위** — original_price + sale_price만 추가? category도? | 데이터 완전성 | 🟡 중간 |
-| 3 | **이미지 추가 수집** — 현재 35개, 90장 목표면 추가 필요 | 시험 1 | 🟡 중간 |
+| 3 | **이미지 추가 수집** — 현재 37개, 100장 목표 (인당 21장 추가) | 시험 1 | 🟡 중간 |
 | 4 | **시험 0 프롬프트 방향** — 기존 v1 대비 뭘 바꾸고 싶은지 | 시험 0 | 🟢 나중 |

@@ -14,7 +14,7 @@
 8. **category** (string, null 가능): 상품 카테고리
 9. **color** (string, null 가능): 색상
 10. **fit** (string, null 가능): 핏/실루엣 정보 (예: 오버핏, 슬림핏, 루즈핏). 상품명에 명시되면 추출하고, 없으면 시각적으로 추론
-11. **style_keywords** (array of string, 기본값: []): 스타일 카테고리 (다음 목록에서만 선택, 여러 개 가능)
+11. **style_keywords** (array of string, 기본값: []): 스타일 카테고리 (다음 목록에서만 선택, 복수 태깅 가능, **최대 3개**)
     - 허용값: "심플베이직", "락시크", "힙", "페미닌", "러블리", "모리걸", "빈티지", "스트릿", "캐주얼", "섹시글램"
 12. **shot_type** (string, null 가능): 사진 유형
     - 허용값: "모델착용샷", "흰배경단독샷", "행거샷", "기타"
@@ -23,6 +23,13 @@
 14. **wishlist_count** (number, null 가능): 찜 수
 15. **delivery_info** (string, null 가능): 배송 타입 (예: "빠른출발", "직진배송", "오늘출발", "무료배송" 등 배송 방식을 나타내는 짧은 텍스트)
 16. **brand_name** (string, null 가능): 상품을 제조/유통하는 브랜드명.
+17. **trend_hype** (number, 0 또는 1): 상품명에 트렌드/인기 마케팅 문구가 있으면 1, 없으면 0 (예: "인기", "랭킹1위", "베스트", "HOT", "트렌드", "핫딜")
+18. **trend_hype_score** (number, 0.0~1.0): 트렌드/인기 마케팅의 자극 강도. 키워드가 많거나 강렬할수록 1.0에 가깝게. 없으면 0.0
+19. **bundle** (number, 0 또는 1): 묶음/증정 마케팅 문구가 있으면 1, 없으면 0 (예: "1+1", "세트", "증정", "사은품", "추가할인")
+20. **bundle_score** (number, 0.0~1.0): 묶음/증정 마케팅의 자극 강도. 없으면 0.0
+21. **confidence** (number, 0 또는 1): 신뢰/검증 마케팅 문구가 있으면 1, 없으면 0 (예: "후기 N건", "리얼후기", "누적판매", "재구매율", "MD추천")
+22. **confidence_score** (number, 0.0~1.0): 신뢰/검증 마케팅의 자극 강도. 없으면 0.0
+23. **marketing_phrases** (array of string, 기본값: []): 위 3축에 해당하는 실제 문구를 원문 그대로 추출
 
 ## 중요 사항
 
@@ -34,6 +41,7 @@
 - **style_keywords**: 이미지의 전체적인 스타일을 고려하여, 허용된 카테고리 목록 중에서만 선택해야 합니다. 예를 들어 모델이 입고 있는 옷의 스타일이 "러블리"하고 "캐주얼"해 보인다면 ["러블리", "캐주얼"]로 입력하세요.
 - **delivery_info**: 배송 일정(예: "내일 도착")이 아닌 배송 방식(예: "빠른출발", "직진배송")을 우선으로 추출하세요.
 - shot_type과 visibility는 허용된 값 중에서만 선택하세요.
+- **마케팅 트리거 (trend_hype, bundle, confidence)**: 상품명 텍스트에서 판단합니다. 0/1은 해당 문구 존재 여부, score는 소비자가 충동구매를 느낄 자극의 강도(0.0~1.0)입니다. 키워드가 여러 개이거나 "주문폭주", "랭킹1위" 같이 강렬한 표현이면 높은 점수를 주세요.
 
 ## 응답 형식
 
@@ -56,7 +64,14 @@
   "visibility": null,
   "wishlist_count": null,
   "delivery_info": null,
-  "brand_name": null
+  "brand_name": null,
+  "trend_hype": 0,
+  "trend_hype_score": 0.0,
+  "bundle": 0,
+  "bundle_score": 0.0,
+  "confidence": 0,
+  "confidence_score": 0.0,
+  "marketing_phrases": []
 }
 ```
 

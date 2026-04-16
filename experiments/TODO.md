@@ -68,12 +68,12 @@
 
 | # | 작업 | 상태 | 비고 |
 |---|------|------|------|
-| 1-1 | `01_create_gt_template.py` — GT 라벨링 템플릿 생성 | ⬜ | 코드, 마케팅 트리거 필드 포함 |
-| 1-2 | GT 라벨링 — 숫자 필드 (100장) | ⬜ 👤 | 경현+팜팜이 (50장씩), 이미지 보고 직접 |
+| 1-1 | `01_create_gt_template.py` — GT 라벨링 엑셀 생성 | ✅ | product_name, has_discount, delivery_info, brand 포함. shot_type 4종 |
+| 1-2 | GT 라벨링 — 텍스트 추출 필드 (100장) | ⬜ 👤 | 경현+팜팜이 (50장씩): product_name, price, has_discount, discount_rate, review_count/score, wishlist_count, delivery_info, brand |
 | 1-2b | GT 라벨링 — style_keywords (100장) | ⬜ 👤 | 낭연+정현 (50장씩), **최대 3개 태깅**. category/color/fit은 GT 안 만들고 모델 결과 수동 판단 |
-| 1-2c | GT 라벨링 — 메타 필드 (100장) | ⬜ 👤 | 경현+팜팜이 (shot_type, visibility) |
+| 1-2c | GT 라벨링 — 메타 필드 (100장) | ⬜ 👤 | 경현+팜팜이 (shot_type 4종, visibility 3종) |
 | 1-2d | GT 라벨링 — 마케팅 트리거 (100장) | ⬜ 👤 | 낭연+정현 (50장씩), trend_hype/bundle/confidence 0/1만 GT. 0~1 스코어는 LLM 추출, GT 없이 정성 평가 |
-| 1-3 | 이미지 추가 수집 (현재 37개 → 100장) | ⬜ 👤 | 인당 21장씩 올리기 |
+| 1-3 | 이미지 추가 수집 (37 → 100장) | ✅ | 100개 완료 |
 | 1-4 | `02_evaluate.py` — GT vs 추출 결과 비교 | ⬜ | 필드별 지표 + 에러 분류 + 마케팅 트리거 P/R/F1 |
 | 1-5 | `03_visualize.py` — 결과 시각화 | ⬜ | 정확도 막대, 에러 유형 파이, 트리거 confusion matrix |
 
@@ -123,8 +123,8 @@
 | U-1 | 에이블리 가격 크롤링 (original_price, sale_price 추가) | TBD | Phase 4 전 | ⬜ |
 | U-2 | style_keywords 어휘 확정 → 추출 프롬프트 기준 10종 사용 확인 | 팜팜이 | Phase 1 (시험 0) | ✅ |
 | U-3 | 시험 0 프롬프트 v2 작성 (상품명 마케팅 트리거 식별 포함) | 팜팜이 | Phase 1 | ⬜ |
-| U-4 | GT 이미지 추가 수집 (37 → 100장) | 전원 (인당 21장) | Phase 2 전 | ⬜ |
-| U-5a | GT 라벨링 — 숫자 필드 (시험 1: 100장) | 경현+팜팜이 | Phase 2 전 | ⬜ |
+| U-4 | GT 이미지 추가 수집 (37 → 100장) | 전원 | Phase 2 전 | ✅ |
+| U-5a | GT 라벨링 — 텍스트 추출 (시험 1: 100장) | 경현+팜팜이 | Phase 2 전 | ⬜ |
 | U-5b | GT 라벨링 — 스타일 필드 (시험 1: 100장) | 낭연+정현 | Phase 2 전 | ⬜ |
 | U-5c | GT 라벨링 — 메타 필드 (시험 1: 100장) | 경현+팜팜이 | Phase 2 전 | ⬜ |
 | U-5d | GT 라벨링 — 마케팅 트리거 (시험 1: 100장) | 낭연+정현 | Phase 2 전 | ⬜ |

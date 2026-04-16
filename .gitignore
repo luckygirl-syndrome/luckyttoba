@@ -32,3 +32,6 @@ data/*.json
 
 # Temp
 *.tmp
+
+# Excel (구글 시트로 공유)
+*.xlsx

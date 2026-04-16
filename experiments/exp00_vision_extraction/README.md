@@ -1,13 +1,13 @@
 # Vision Extraction Test
 
-쇼핑 스크린샷 이미지에서 Vision LLM(Gemini, GPT-4o)이 상품 정보를 정확하게 추출하는지 평가하는 실험 프로젝트입니다.
+쇼핑 스크린샷 이미지에서 Vision LLM이 상품 정보를 정확하게 추출하는지 평가하는 실험입니다.
 
 ## 개요
 
 - **목표**: Vision 모델의 상품 정보 추출 성능 테스트
-- **모델**: Google Gemini, OpenAI GPT-4o
+- **모델**: Gemini 3.1 Flash-Lite
 - **테스트 데이터**: 쇼핑몰 스크린샷 이미지
-- **추출 대상**: 상품명, 가격, 할인율, 리뷰, 색상, 핏, 배송 정보 등
+- **추출 대상**: 상품명, 가격, 할인율, 리뷰, 색상, 핏, 배송 정보, 마케팅 트리거 등
 
 ## 설치
 
@@ -25,7 +25,6 @@ cp .env.example .env
 
 필요한 API 키:
 - **Gemini**: https://aistudio.google.com/app/apikeys
-- **OpenAI**: https://platform.openai.com/api-keys
 
 ## 사용법
 
@@ -53,15 +52,14 @@ images/
 
 ### 3. 추출 실행
 
-모든 모델로 추출:
+기본 실행 (v1 프롬프트):
 ```bash
 python run_extraction.py
 ```
 
-특정 모델만 사용:
+v2 프롬프트로 실행:
 ```bash
-python run_extraction.py --models gemini
-python run_extraction.py --models gpt
+python run_extraction.py --prompt-version v2
 ```
 
 특정 데이터만 처리 (인덱스 기반):
@@ -93,7 +91,7 @@ python run_extraction.py --indices 0 2 3
 | color | 색상 | "오프화이트" |
 | fit | 핏 | "오버핏" |
 | style_keywords | 스타일 | ["캐주얼", "스트릿"] |
-| shot_type | 사진 유형 | "모델착용샷", "흰배경단독샷", "행거샷", "기타" |
+| shot_type | 사진 유형 | "모델착용샷", "단독샷", "행거샷", "기타" |
 | visibility | 상품 가시성 | "양호", "부분가림", "불량" |
 | wishlist_count | 찜 수 | 3200 |
 | delivery_info | 배송 정보 | "빠른출발", "직진배송" |

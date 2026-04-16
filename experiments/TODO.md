@@ -50,8 +50,8 @@
 
 | # | 작업 | 상태 | 비고 |
 |---|------|------|------|
-| 0-a | `run_extraction.py`에 `--prompt-version` 인자 추가 | ⬜ | v1(경현) vs v2(팜팜이) 분리 |
-| 0-b | 프롬프트 v2 작성 | ⬜ 👤 | style_keywords 어휘 = 추출 프롬프트 기준 10종 |
+| 0-a | `run_extraction.py`에 `--prompt-version` 인자 추가 | ✅ | 파일명 통일: `extraction_v{N}_gemini.txt`, v1 분기 특수처리 제거 |
+| 0-b | 프롬프트 v2 작성 | ✅ 👤 | shot_type 단독샷 변경, visibility 판정 기준 추가 |
 | 0-c | v2 프롬프트로 추출 실행 | ⬜ 👤 | 전체 이미지 대상, 상품명에서 마케팅 트리거도 같이 식별 |
 | 0-d | v1 vs v2 결과 비교 스크립트 | ⬜ | 간단한 diff 요약 |
 

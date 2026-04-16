@@ -117,10 +117,8 @@ class Product:
 exp00_vision_extraction/
 ├── run_extraction.py           # 기존 스크립트 (수정)
 ├── prompts/
-│   ├── gemini_prompt_v1.txt              # 기존 (경현 v1)
-│   ├── gpt_prompt_v1.txt                 # 기존 (경현 v1)
-│   ├── gemini_prompt_v2.txt              # 팜팜이 v2 (새로 작성)
-│   └── gpt_prompt_v2.txt                 # (필요 시)
+│   ├── extraction_v1_gemini.txt          # 기존 (경현 v1)
+│   └── extraction_v2_gemini.txt          # 팜팜이 v2 (새로 작성)
 ├── manifests/
 │   └── dataset.jsonl
 ├── results/
@@ -134,24 +132,30 @@ exp00_vision_extraction/
 **run_extraction.py 변경:**
 - `--prompt-version` 인자 추가 (v1/v2 선택)
 - 결과 저장 경로에 프롬프트 버전 포함
-- 모델은 Gemini 3.1 Flash-Lite 단일 (GPT-4o는 선택)
+- 프롬프트 파일명: `extraction_v{N}_gemini.txt` (버전별 별도 파일, v1 덮어쓰기 금지)
+- 모델은 Gemini 3.1 Flash-Lite 단일
 
 ### shot_type 정의
 
 | 유형 | 설명 |
 |------|------|
-| 모델 착용샷 | 모델이 옷을 입고 촬영 |
-| 흰 배경 단독샷 | 옷만 흰 배경에 놓고 촬영 |
+| 모델착용샷 | 모델이 옷을 입고 촬영 |
+| 단독샷 | 옷만 놓고 촬영 (배경 무관) |
 | 행거샷 | 옷걸이에 걸어서 촬영 |
 | 기타 | 위 3가지에 해당하지 않는 경우 |
 
 ### visibility 정의
 
-| 등급 | 설명 | 스타일 판단 |
+"구매 결정에 필요한 상품 정보를 얼마나 볼 수 있는가" 기준. 배경·소품·워터마크는 무시, 옷 자체만 평가.
+착용샷은 타겟 상품 부위 기준 판정 (상의 타겟이면 하의 잘림은 감점 없음).
+
+| 등급 | 기준 | 스타일 판단 |
 |------|------|------------|
-| 양호 | 옷 전체가 선명하게 보임 | 가능 — score 제한 없음 |
-| 부분가림 | 모델 포즈·소품·크롭 등으로 일부 가려짐 | 제한적 |
-| 불량 | 옷이 대부분 안 보이거나 이미지 품질 낮음 | 불가 |
+| 양호 | 핵심 실루엣+디자인 온전. 모서리 5%이하 잘림, 포즈 접힘, 비핵심 워터마크 허용 | 가능 |
+| 부분가림 | 면적 10~40% 가림, 디자인 포인트 가림, 크롭 1/4 이상 잘림 | 제한적 |
+| 불량 | 면적 40% 초과 가림, 디테일컷만, 역광/과노출, 여러 상품 겹침 | 불가 |
+
+> 상세 판정 기준 + 엣지케이스는 `prompts/extraction_v2_gemini.txt` 참조
 
 ### 배송 정보
 
@@ -223,7 +227,7 @@ exp01_vision_accuracy/
 | 텍스트 추출 | wishlist_count | ±10% | 비율 |
 | 추론 | category, color, fit | 수동 판단 (모델 결과를 사람이 직접 맞는지 평가) | - |
 | 추론 | style_keywords | Multi-label F1 | 최대 3개 태깅 |
-| 추론 | shot_type | Exact Match (모델 착용샷/흰 배경 단독샷/행거샷/기타) | - |
+| 추론 | shot_type | Exact Match (모델착용샷/단독샷/행거샷/기타) | - |
 | 추론 | visibility | Exact Match (양호/부분가림/불량) | - |
 | 마케팅 트리거 | trend_hype, bundle, confidence | 0/1: 축별 P/R/F1. 0~1 스코어: GT 없이 정성 평가 | LLM 추출 (프롬프트에서 0/1 + 0~1 둘 다 출력) |
 | 선택 | delivery_info | 존재 여부 + 내용 일치 (정성 평가) | - |
@@ -254,7 +258,7 @@ GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준
 | 필드 그룹 | 필드 | 담당 | 방식 |
 |-----------|------|------|------|
 | 텍스트 추출 | product_name, original_price, has_discount, discounted_price, discount_rate, review_count, review_score, wishlist_count | 경현+팜팜이 (50장씩) | 이미지 보고 직접 라벨링 |
-| 메타 | shot_type, visibility | 경현+팜팜이 (숫자와 함께) | 이미지 보고 직접 라벨링. shot_type은 4종(모델 착용샷/흰 배경 단독샷/행거샷/기타) |
+| 메타 | shot_type, visibility | 경현+팜팜이 (숫자와 함께) | 이미지 보고 직접 라벨링. shot_type은 4종(모델착용샷/단독샷/행거샷/기타) |
 | 스타일 | style_keywords | 낭연+정현 (50장씩) | 이미지 보고 직접 라벨링, **최대 3개** |
 | 스타일 (수동) | category, color, fit | 낭연+정현 | 모델 결과를 보고 맞는지 판단 (GT 일괄 생성 안 함) |
 | 마케팅 트리거 | trend_hype, bundle, confidence | 낭연+정현 (50장씩) | 상품 제목 보고 0/1 라벨링 (GT). 0~1 스코어는 LLM 추출, GT 없이 정성 평가 |
@@ -615,4 +619,4 @@ exp05_score_distribution/
 | ~~1~~ | ~~**style_keywords 어휘 통일**~~ → ✅ 추출 프롬프트 기준 10종으로 확정 | ~~시험 0, 3, 4~~ | ✅ 해결 |
 | 2 | **에이블리 크롤링 범위** — original_price + sale_price만 추가? category도? | 데이터 완전성 | 🟡 중간 |
 | 3 | **이미지 추가 수집** — 현재 37개, 100장 목표 (인당 21장 추가) | 시험 1 | 🟡 중간 |
-| 4 | **시험 0 프롬프트 방향** — 기존 v1 대비 뭘 바꾸고 싶은지 | 시험 0 | 🟢 나중 |
+| ~~4~~ | ~~**시험 0 프롬프트 방향**~~ → ✅ v2 작성 완료: shot_type 변경(단독샷), visibility 판정 기준 추가 | ~~시험 0~~ | ✅ 해결 |

@@ -136,11 +136,20 @@ exp00_vision_extraction/
 - 결과 저장 경로에 프롬프트 버전 포함
 - 모델은 Gemini 3.1 Flash-Lite 단일 (GPT-4o는 선택)
 
+### shot_type 정의
+
+| 유형 | 설명 |
+|------|------|
+| 모델 착용샷 | 모델이 옷을 입고 촬영 |
+| 흰 배경 단독샷 | 옷만 흰 배경에 놓고 촬영 |
+| 행거샷 | 옷걸이에 걸어서 촬영 |
+| 기타 | 위 3가지에 해당하지 않는 경우 |
+
 ### visibility 정의
 
 | 등급 | 설명 | 스타일 판단 |
 |------|------|------------|
-| 양호 | 옷 전체가 선명하게 보임 (정면/전신 컷 등) | 가능 — score 제한 없음 |
+| 양호 | 옷 전체가 선명하게 보임 | 가능 — score 제한 없음 |
 | 부분가림 | 모델 포즈·소품·크롭 등으로 일부 가려짐 | 제한적 |
 | 불량 | 옷이 대부분 안 보이거나 이미지 품질 낮음 | 불가 |
 
@@ -207,14 +216,18 @@ exp01_vision_accuracy/
 |-----------|------|------|----------|
 | 텍스트 추출 | product_name | 포함 여부 (핵심 단어) | - |
 | 텍스트 추출 | original_price, discounted_price | Exact 또는 ±500원 | 500 |
+| 텍스트 추출 | has_discount | Exact Match (0/1) | - |
 | 텍스트 추출 | discount_rate | Exact 또는 ±2% | 2 |
 | 텍스트 추출 | review_count | ±5% | 비율 |
 | 텍스트 추출 | review_score | ±0.1 | 0.1 |
 | 텍스트 추출 | wishlist_count | ±10% | 비율 |
 | 추론 | category, color, fit | 수동 판단 (모델 결과를 사람이 직접 맞는지 평가) | - |
 | 추론 | style_keywords | Multi-label F1 | 최대 3개 태깅 |
-| 추론 | shot_type, visibility | Exact Match | - |
+| 추론 | shot_type | Exact Match (모델 착용샷/흰 배경 단독샷/행거샷/기타) | - |
+| 추론 | visibility | Exact Match (양호/부분가림/불량) | - |
 | 마케팅 트리거 | trend_hype, bundle, confidence | 0/1: 축별 P/R/F1. 0~1 스코어: GT 없이 정성 평가 | LLM 추출 (프롬프트에서 0/1 + 0~1 둘 다 출력) |
+| 선택 | delivery_info | 존재 여부 + 내용 일치 (정성 평가) | - |
+| 선택 | brand | Exact Match | - |
 
 > **category, color, fit**은 표기 변형이 너무 다양하여(후드집업 vs 집업, black vs 블랙, 스탠다드핏 vs 레귤러핏 등) 자동 exact match 대신 **모델이 뽑은 결과를 사람이 직접 보고 맞는지 판단**하는 방식으로 평가한다. GT를 일괄 생성하지 않음.
 
@@ -240,11 +253,12 @@ GT는 전부 사람이 직접 만든다 — 프롬프트 튜닝의 정답 기준
 
 | 필드 그룹 | 필드 | 담당 | 방식 |
 |-----------|------|------|------|
-| 숫자 | price, discount_rate, review_count, review_score, wishlist_count | 경현+팜팜이 (50장씩) | 이미지 보고 직접 라벨링 |
+| 텍스트 추출 | product_name, original_price, has_discount, discounted_price, discount_rate, review_count, review_score, wishlist_count | 경현+팜팜이 (50장씩) | 이미지 보고 직접 라벨링 |
+| 메타 | shot_type, visibility | 경현+팜팜이 (숫자와 함께) | 이미지 보고 직접 라벨링. shot_type은 4종(모델 착용샷/흰 배경 단독샷/행거샷/기타) |
 | 스타일 | style_keywords | 낭연+정현 (50장씩) | 이미지 보고 직접 라벨링, **최대 3개** |
 | 스타일 (수동) | category, color, fit | 낭연+정현 | 모델 결과를 보고 맞는지 판단 (GT 일괄 생성 안 함) |
-| 메타 | shot_type, visibility | 경현+팜팜이 (숫자와 함께) | 이미지 보고 직접 라벨링 |
 | 마케팅 트리거 | trend_hype, bundle, confidence | 낭연+정현 (50장씩) | 상품 제목 보고 0/1 라벨링 (GT). 0~1 스코어는 LLM 추출, GT 없이 정성 평가 |
+| 선택 | delivery_info, brand | 경현+팜팜이 (숫자와 함께) | 이미지에 보이면 입력, 안 보이면 비워두기 |
 
 - **100장** = 플랫폼별 균등 배분 (현재 37장 → 인당 21장씩 추가 수집)
 - 프롬프트를 바꿔가면서 GT와 비교 → 정확도 개선 반복

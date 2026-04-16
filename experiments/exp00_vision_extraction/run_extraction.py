@@ -28,12 +28,9 @@ class VisionExtractor:
 
     def _load_prompts(self):
         """Load prompts for each model (prompt_version에 따라 파일 선택)"""
-        models = ["gemini", "gpt"]
+        models = ["gemini"]
         for model in models:
-            if self.prompt_version == "v1":
-                prompt_path = self.base_dir / "prompts" / f"extraction_prompt_{model}.txt"
-            else:
-                prompt_path = self.base_dir / "prompts" / f"extraction_{self.prompt_version}_{model}.txt"
+            prompt_path = self.base_dir / "prompts" / f"extraction_{self.prompt_version}_{model}.txt"
             if prompt_path.exists():
                 with open(prompt_path, "r", encoding="utf-8") as f:
                     self.prompts[model] = f.read()

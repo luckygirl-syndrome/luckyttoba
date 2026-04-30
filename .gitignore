@@ -33,5 +33,9 @@ data/*.json
 # Temp
 *.tmp
 
+# 개인 작업 노트
+task.md
+TASK.md
+
 # Excel (구글 시트로 공유)
 *.xlsx

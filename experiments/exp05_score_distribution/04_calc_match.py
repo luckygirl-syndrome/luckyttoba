@@ -36,8 +36,9 @@ def main():
     print(f"검증: subtotal 불일치 {mismatches}개")
 
     # 결과 저장
-    result = users[["user_id", "sbti", "price_reasonable", "interest_persistence",
-                     "discovery_stability", "match_subtotal"]].copy()
+    result = users[["user_id", "price_reasonable", "interest_persistence",
+                     "discovery_stability", "match_subtotal",
+                     "price_label", "interest_label", "discovery_label"]].copy()
     out_path = OUTPUT_DIR / "match_subtotals.parquet"
     result.to_parquet(out_path, index=False)
     print(f"저장: {out_path}")

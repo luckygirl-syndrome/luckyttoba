@@ -26,8 +26,11 @@ from shared.scoring.impulse import (
 OUTPUT_DIR = Path(__file__).parent / "outputs"
 
 
-def decompose_impulse(product, user):
-    """Impulse Score + 5개 피쳐 기여도 분해."""
+def decompose_impulse(product, user, use_improved_formula=False):
+    """Impulse Score + 5개 피쳐 기여도 분해.
+
+    use_improved_formula=True: 기본점수 +10, D유형 +5 적용
+    """
     dr = product["discount_rate"]
     rc = product["review_count"]
     rt = product["rating"]
@@ -107,6 +110,12 @@ def decompose_impulse(product, user):
     raw_score = discount_contrib + rating_contrib + review_contrib + like_contrib + marketing_contrib
     impulse_score = max(0, min(100, round((raw_score / MAX_POSSIBLE) * 100)))
 
+    # 공식 개선 적용
+    if use_improved_formula:
+        impulse_score = impulse_score + 10  # 기본점수 +10
+        if is_D:
+            impulse_score = impulse_score + 5  # D유형 +5
+
     return {
         "impulse_score": impulse_score,
         "discount_contrib": round(discount_contrib, 6),
@@ -117,19 +126,22 @@ def decompose_impulse(product, user):
     }
 
 
-def main():
+def compute_all_versions():
+    """원본 + 개선 공식 두 버전 모두 계산."""
     products = pd.read_parquet(OUTPUT_DIR / "products_600.parquet")
     users = pd.read_parquet(OUTPUT_DIR / "virtual_users.parquet")
     print(f"상품: {len(products)}개, 유저: {len(users)}명")
-    print(f"계산할 쌍: {len(products) * len(users):,}개")
+    print(f"계산할 쌍: {len(products) * len(users):,}개\n")
 
-    rows = []
+    # v0: 원본 공식
+    print("[v0] 원본 공식 계산 중...")
+    rows_v0 = []
     for _, user in users.iterrows():
         user_dict = user.to_dict()
         for _, prod in products.iterrows():
             prod_dict = prod.to_dict()
-            result = decompose_impulse(prod_dict, user_dict)
-            rows.append({
+            result = decompose_impulse(prod_dict, user_dict, use_improved_formula=False)
+            rows_v0.append({
                 "product_id": prod_dict["product_id"],
                 "user_id": user_dict["user_id"],
                 "sbti": user_dict["sbti"],
@@ -137,13 +149,60 @@ def main():
                 **result,
             })
 
-    df = pd.DataFrame(rows)
-    out_path = OUTPUT_DIR / "impulse_scores.parquet"
-    df.to_parquet(out_path, index=False)
-    print(f"\n저장: {out_path}")
+    df_v0 = pd.DataFrame(rows_v0)
+    out_path_v0 = OUTPUT_DIR / "impulse_scores.parquet"
+    df_v0.to_parquet(out_path_v0, index=False)
+    print(f"  저장: {out_path_v0}")
+    print(f"  분포: min={df_v0['impulse_score'].min()}, max={df_v0['impulse_score'].max()}, "
+          f"mean={df_v0['impulse_score'].mean():.1f}, median={df_v0['impulse_score'].median():.1f}")
 
-    # 검증: compute_impulse_score와 일치하는지 샘플 체크
-    sample = df.sample(n=10, random_state=42)
+    # v1: 개선 공식
+    print("\n[v1] 공식 개선 계산 중...")
+    rows_improved = []
+    for _, user in users.iterrows():
+        user_dict = user.to_dict()
+        for _, prod in products.iterrows():
+            prod_dict = prod.to_dict()
+            result = decompose_impulse(prod_dict, user_dict, use_improved_formula=True)
+            rows_improved.append({
+                "product_id": prod_dict["product_id"],
+                "user_id": user_dict["user_id"],
+                "sbti": user_dict["sbti"],
+                "platform": prod_dict["platform"],
+                **result,
+            })
+
+    df_improved = pd.DataFrame(rows_improved)
+    out_path_improved = OUTPUT_DIR / "impulse_scores_v1.parquet"
+    df_improved.to_parquet(out_path_improved, index=False)
+    print(f"  저장: {out_path_improved}")
+    print(f"  분포: min={df_improved['impulse_score'].min()}, max={df_improved['impulse_score'].max()}, "
+          f"mean={df_improved['impulse_score'].mean():.1f}, median={df_improved['impulse_score'].median():.1f}")
+
+    # 비교 분석
+    print("\n[비교 분석]")
+    print(f"  전체 변화: {df_v0['impulse_score'].mean():.1f} → {df_improved['impulse_score'].mean():.1f}")
+
+    # D/N 유형별 비교
+    d_v0 = df_v0[df_v0['sbti'].str[0] == 'D']['impulse_score'].mean()
+    d_improved = df_improved[df_improved['sbti'].str[0] == 'D']['impulse_score'].mean()
+    n_v0 = df_v0[df_v0['sbti'].str[0] == 'N']['impulse_score'].mean()
+    n_improved = df_improved[df_improved['sbti'].str[0] == 'N']['impulse_score'].mean()
+    print(f"  D유형: {d_v0:.1f} → {d_improved:.1f} (Δ={d_improved - d_v0:.1f})")
+    print(f"  N유형: {n_v0:.1f} → {n_improved:.1f} (Δ={n_improved - n_v0:.1f})")
+    print(f"  D-N 차이: {abs(d_v0 - n_v0):.1f} → {abs(d_improved - n_improved):.1f}")
+
+    return df_v0, df_improved
+
+
+def main():
+    df_v0, df_improved = compute_all_versions()
+
+    # v0 검증
+    print("\n[v0 검증]")
+    products = pd.read_parquet(OUTPUT_DIR / "products_600.parquet")
+    users = pd.read_parquet(OUTPUT_DIR / "virtual_users.parquet")
+    sample = df_v0.sample(n=10, random_state=42)
     mismatches = 0
     for _, row in sample.iterrows():
         prod = products[products["product_id"] == row["product_id"]].iloc[0]
@@ -165,15 +224,14 @@ def main():
         if expected != row["impulse_score"]:
             mismatches += 1
             print(f"  불일치: product={row['product_id']}, user={row['user_id']}: {expected} vs {row['impulse_score']}")
-    print(f"\n검증: 10개 샘플 중 불일치 {mismatches}개")
+    print(f"  10개 샘플 중 불일치 {mismatches}개")
 
-    # 요약
-    print(f"\nImpulse Score 분포:")
-    print(df["impulse_score"].describe().to_string())
+    # v0 요약
+    print(f"\n[v0] Impulse Score 분포:")
+    print(df_v0["impulse_score"].describe().to_string())
 
-    print(f"\n피쳐 기여도 평균 (raw):")
-    for col in ["discount_contrib", "rating_contrib", "review_contrib", "like_contrib", "marketing_contrib"]:
-        print(f"  {col}: {df[col].mean():.4f}")
+    print(f"\n[v0_improved] Impulse Score 분포:")
+    print(df_improved["impulse_score"].describe().to_string())
 
 
 if __name__ == "__main__":

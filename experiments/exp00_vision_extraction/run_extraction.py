@@ -279,8 +279,8 @@ def main():
     parser.add_argument(
         "--prompt-version",
         default="v1",
-        choices=["v1", "v2"],
-        help="Prompt version: v1 (기존) or v2 (새 프롬프트)"
+        choices=["v1", "v2", "v3"],
+        help="Prompt version: v1 / v2 / v3 (GT 양식 1:1 일치)"
     )
     parser.add_argument(
         "--indices",

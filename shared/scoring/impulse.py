@@ -14,13 +14,6 @@ REVIEW_M_TABLE = {
     "default":    (100,   650,   0.0,  -0.4,  -0.9),
 }
 
-LIKE_M_TABLE = {
-    "무신사":     (4000,  13000,  0.0,  -0.3,  -0.6),
-    "에이블리":   (10000, 30000,  0.0,  -0.3,  -0.6),
-    "지그재그":   (None,  None,   0.0,   0.0,   0.0),
-    "default":    (4000,  13000,  0.0,  -0.3,  -0.6),
-}
-
 DISCOUNT_TABLE = [
     (0,   0,   0.00),
     (1,   10,  0.15),
@@ -62,10 +55,7 @@ def compute_impulse_score(
     discount_rate,
     review_count,
     rating,
-    like_count,
-    trend_hype,      # 0 or 1
-    bundle,          # 0 or 1
-    confidence,      # 0 or 1
+    personalized_score,  # ai_prompt.py 마케팅 보정 점수 (0~100)
     # 유저 SBTI 플래그
     is_D, is_N,
     is_U, is_I,
@@ -73,12 +63,8 @@ def compute_impulse_score(
     is_E, is_O,
     # 플랫폼
     platform="default",
-    # 마케팅 트리거 연속 스코어 (0.0~1.0, None이면 0/1 사용)
-    trend_hype_score=None,
-    bundle_score=None,
-    confidence_score=None,
 ) -> int:
-    """Impulse Score (0~100) 계산."""
+    """Impulse Score (0~100) 계산. personalized_score 기반."""
 
     # Step 1: 피쳐 정규화
     discount_score = _get_discount_score(discount_rate)
@@ -93,36 +79,8 @@ def compute_impulse_score(
     else:
         rating_score = max((rating - 3.0) / 2.0, 0.0)
 
-    if is_M:
-        like_score = _get_m_score(like_count, LIKE_M_TABLE, platform)
-    else:
-        like_score = min(log10(like_count + 1) / log10(10001), 1.0) ** 1.5
-
-    # title_marketing_score
-    if is_M:
-        w1 = 0.0
-    elif is_T and is_U:
-        w1 = 0.5
-    elif is_T:
-        w1 = 0.4
-    elif is_U:
-        w1 = 0.3
-    else:
-        w1 = 0.2
-
-    w2 = 0.4 if is_E else 0.2
-    w3 = 0.4 if is_O else 0.3
-
-    # 연속 스코어가 주어지면 0/1 대신 사용
-    th = trend_hype if trend_hype_score is None else trend_hype_score
-    bd = bundle if bundle_score is None else bundle_score
-    cf = confidence if confidence_score is None else confidence_score
-
-    w_total = w1 + w2 + w3
-    if w_total > 0:
-        title_marketing_score = (w1 * th + w2 * bd + w3 * cf) / w_total
-    else:
-        title_marketing_score = 0.0
+    # title_marketing_score: personalized_score(0~100) → 0~1 정규화
+    title_marketing_score = max(0.0, min(1.0, personalized_score / 100.0))
 
     # Step 2: SBTI Multiplier
     discount_m = 1.2 * (1.3 if is_E else (0.9 if is_O else 1.0))
@@ -142,10 +100,9 @@ def compute_impulse_score(
     # Step 3: 가중합
     raw_score = (
         0.35 * discount_score         * discount_m
-      + 0.20 * rating_score           * rating_m
-      + 0.15 * review_score           * review_count_m
-      + 0.10 * like_score             * like_count_m
-      + 0.20 * title_marketing_score  * title_marketing_m
+      + 0.25 * rating_score           * rating_m
+      + 0.18 * review_score           * review_count_m
+      + 0.22 * title_marketing_score  * title_marketing_m
     )
 
     # Step 4: 0~100 변환 (기본 점수 가산)

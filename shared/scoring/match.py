@@ -5,13 +5,13 @@ style_similarity는 LLM 호출이 필요하므로 여기선 외부에서 주입�
 
 
 def compute_match_score(
-    style_similarity: int,       # 0~35 (LLM 산출)
+    style_match_score: int,      # 0~35 (ai_prompt.py 출력)
     price_reasonable: int,       # 3, 10, 18, 25
     interest_persistence: int,   # 4, 10, 16, 20
     discovery_stability: int,    # 6, 10, 12, 20
 ) -> int:
     """Match Score (0~100) 계산. 단순 합산."""
-    return style_similarity + price_reasonable + interest_persistence + discovery_stability
+    return style_match_score + price_reasonable + interest_persistence + discovery_stability
 
 
 def compute_match_score_without_style(

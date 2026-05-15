@@ -1,5 +1,7 @@
 """공통 질문 응답별 Match Score 피쳐 점수 매핑."""
 
+from typing import List, Dict
+
 # --- price_reasonable (25점 만점) ---
 PRICE_REASONABLE = {
     "저렴한 것 같아요": 25,
@@ -26,7 +28,7 @@ DISCOVERY_STABILITY = {
 }
 
 
-def get_all_survey_combinations() -> list[dict]:
+def get_all_survey_combinations() -> List[Dict]:
     """price × interest × discovery 모든 유효 조합을 생성.
 
     Returns: list of dict with keys:
